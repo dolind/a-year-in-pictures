@@ -26,7 +26,7 @@
 /// Global Variables
 Inkplate display(INKPLATE_1BIT); // Create an object on Inkplate library and also set library into 1 Bit mode (BW)
 SdFile file;                     // Create SdFile object used for accessing files on SD card
-RTC_DATA_ATTR int dayNumber = 2;
+RTC_DATA_ATTR int dayNumber = 1;
 
 
 void setup()
@@ -34,8 +34,10 @@ void setup()
     bool ENABLE_DEEP_SLEEP {false};
     
     const std::chrono::seconds oneDay {60*60*24};
-    const std::chrono::seconds TIME_TO_SLEEP {2};
-  
+    const std::chrono::seconds halfDay {60*60*12};
+    const std::chrono::seconds TIME_TO_SLEEP {halfDay};
+
+
     if ((dayNumber == 1) || (dayNumber == 365)){
       dayNumber = resetToDayOfTheYear();  
     }
@@ -52,7 +54,7 @@ void setup()
       return;
     }
     
-    constexpr int MAX_IMAGES {54};
+    constexpr int MAX_IMAGES {734};
     while(dayNumber < MAX_IMAGES){
       displayDailyImage(dayNumber);
       dayNumber++;
