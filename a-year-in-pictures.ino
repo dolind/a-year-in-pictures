@@ -22,31 +22,34 @@
 
 #include <chrono>
 
+constexpr std::chrono::seconds oneDay {60*60*24};
+constexpr std::chrono::seconds fourHours {60*60*4};
+
 
 /// Global Variables
 Inkplate display(INKPLATE_1BIT); // Create an object on Inkplate library and also set library into 1 Bit mode (BW)
-SdFile file;                     // Create SdFile object used for accessing files on SD card
-RTC_DATA_ATTR int dayNumber = 1;
+
+/// Data
+RTC_DATA_ATTR int dayNumber = 0;
+RTC_DATA_ATTR int smallSleepCycles = 4;
+
+/// Parameters
+constexpr float VOLTAGE_MIN = 3.6;
+constexpr int MAX_IMAGES {734};
+
+/// Use to turn deep sleep on
+constexpr bool ENABLE_DEEP_SLEEP {true};
+
+/// Sleep parameters
+/// Use to define multiples of time to sleep. Must be used as max sleep time is 4h
+constexpr int REPEAT_SLEEP_CYCLE {3};
+constexpr std::chrono::seconds TIME_TO_SLEEP {fourHours};
 
 
 void setup()
 {
-    bool ENABLE_DEEP_SLEEP {false};
-    
-    const std::chrono::seconds oneDay {60*60*24};
-    const std::chrono::seconds halfDay {60*60*12};
-    const std::chrono::seconds TIME_TO_SLEEP {halfDay};
 
-
-    if ((dayNumber == 1) || (dayNumber == 365)){
-      dayNumber = resetToDayOfTheYear();  
-    }
-    
-    Serial.begin(115200);
-
-    display.begin();        // Init Inkplate library (you should call this function ONLY ONCE)
-    display.clearDisplay(); // Clear frame buffer of display
-    display.display();      // Put clear image on display
+    display.begin();        // Init Inkplate library (you should call this function ONLY ONCE), necessary for RTC_DATA
 
     // Init SD card. Display if SD card is init propery or not.
     if (!initSDCard())
@@ -54,18 +57,83 @@ void setup()
       return;
     }
     
-    constexpr int MAX_IMAGES {734};
+    
+    // Calling the function for the first time and init display
+    if (dayNumber == 0)
+    {
+  
+      display.clearDisplay(); // Clear frame buffer of display
+      display.display();      // Put clear image on display
+      dayNumber = recoverLastImageFromSD();
+    }
+
+    // Reseting to valid image
+    if ((dayNumber == MAX_IMAGES)){
+      dayNumber = 1;  
+    }
+
+
+    
+    // This is the main loop either runs here in loop or will exit for deep sleep
     while(dayNumber < MAX_IMAGES){
+  
+      // Workaround as we can only sleep for 4 hours
+      if (smallSleepCycles < REPEAT_SLEEP_CYCLE)
+      {
+        smallSleepCycles++;
+        waitForNextImage(TIME_TO_SLEEP, ENABLE_DEEP_SLEEP);
+      }
+      else{
+        smallSleepCycles = 0;
+      }
+
       displayDailyImage(dayNumber);
+
       dayNumber++;
       waitForNextImage(TIME_TO_SLEEP, ENABLE_DEEP_SLEEP);
     }
 }
 
-int resetToDayOfTheYear(){
-  return 1;
+/// Read last image after a hard reset
+int recoverLastImageFromSD(){
+  char val[6];
+  float v;
+  int i=0;
+
+  SdFile file;
+  file.open("/last.txt");
+  
+  while(val[i-1]!='\n'){
+      val[i]=file.read();
+      i++;
+  }
+  file.close();
+
+  return atoi(val);
 }
 
+
+/// Store in the log file
+void writeToLogfile(const String& input){
+                    
+  SdFile file;
+  if (file.open("/log.txt",O_CREAT | O_RDWR | O_APPEND)){
+    file.println(input);
+  }
+  file.close();
+  
+}
+
+/// Store the last known image
+void writeToLast(int input){
+                    
+  SdFile file;
+  if (file.open("/last.txt",O_CREAT | O_RDWR)){
+    file.println(input);
+  }
+  file.close();
+  
+}
 void displayDailyImage(int dayNumber){
 
     const String imagePrefix {"a-year-in-pictures-"};
@@ -88,8 +156,19 @@ void displayDailyImage(int dayNumber){
         // compression! You can turn of dithering for somewhat faster image load by changing the last 1 to 0, or
         // removing the 1 argument completely
         display.println("Image open error");
-        display.display();
     }
+    
+    const float voltage = display.readBattery();
+    if (voltage < VOLTAGE_MIN)
+    {
+        display.setTextSize(10);
+        display.setCursor(10, 10);
+        display.print("Recharge Battery!");
+        String outputStr =  String(voltage) + String(',') + String(dayNumber);
+        writeToLogfile(outputStr);
+        
+    }
+    writeToLast(dayNumber);
     display.display();
   
 }
@@ -112,6 +191,12 @@ bool initSDCard(){
 void waitForNextImage(const std::chrono::seconds& waitTime , bool enableDeepSleep ){
 
   if (enableDeepSleep) {
+      // disable eink power consumption
+      display.einkOff();
+
+      WiFi.disconnect(true);
+      WiFi.mode(WIFI_STA);
+      
       // Isolate/disable GPIO12 on ESP32 (only to reduce power consumption in sleep)
       rtc_gpio_isolate(GPIO_NUM_12);
 
