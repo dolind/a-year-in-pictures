@@ -1,9 +1,9 @@
-import {ditherIt as ditherV1} from "src/version1/core.js";
-import {ditherIt as ditherV2} from "src/version2/core.js";
-import {ditherIt as ditherGPU} from "src/version3/core.js";
-import {ditherIt as ditherV4} from "src/version4/core.js";
-import {floydSteinbergLUT} from "src/version5/core.js";
-import {floydSteinbergBW} from "src/version6/core.js";
+import {ditherIt as ditherV1} from "./src/version1/core.js";
+import {ditherIt as ditherV2} from "./src/version2/core.js";
+import {ditherIt as ditherGPU} from "./src/version3/core.js";
+import {ditherIt as ditherV4} from "./src/version4/core.js";
+import {floydSteinbergLUT} from "./src/version5/core.js";
+import {floydSteinbergBW} from "./src/version6/core.js";
 
 let img;
 let originalImg
