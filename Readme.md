@@ -44,7 +44,7 @@ Reproducing the the GIMP result in python was not possible.
 See the blog article for more details.
 Instead I found a more complex dithering preprocessing that uses Bayer matrix dithering from [CADA](https://www.cada.art/columns/untitled).
 
-In `src/nodejs-converter` you find the script. Run with `node app.js`.
+Run with `node app.js`.
 
 
 I tried to improve performance by vectorizing the dithering. The tests cover the conversion process.
