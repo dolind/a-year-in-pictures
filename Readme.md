@@ -27,7 +27,7 @@ The hardware is an inkplate epaper mounted in a picture frame.
 The software loads pictures from the sd card and displays one picture a time. 
 After display it sends the esp32 to sleep to be easy on the attached battery.
 
-## How to convert pictures
+## How to convert pictures with gimp
 
 The [gimp batch processing program](https://github.com/alessandrofrancesconi/gimp-plugin-bimp) is used to convert images.
 
@@ -36,3 +36,22 @@ You can use __sort_images.sh__ to select the vertical images.
 
 Then load the __convert_vertical.bimp__ preset in bimp.
 Then use __indexed.bimp__ to convert all pictures with gimp.
+
+
+## How to convert with node js
+I wanted a full pipeline in a script to streamline the process.
+Reproducing the the GIMP result in python was not possible.
+See the blog article for more details.
+Instead I found a more complex dithering preprocessing that uses Bayer matrix dithering from [CADA](https://www.cada.art/columns/untitled).
+
+In `src/nodejs-converter` you find the script. Run with `node app.js`.
+
+
+I tried to improve performance by vectorizing the dithering. The tests cover the conversion process.
+I also tried to use WebGPU. However the result is different and the performance is slower than the CPU version.
+
+As the inkplate is a 3BIT epaper I also tried 3bit floyd-steinberg dithering.
+
+The node based version has minor changes based to the browser based study.
+
+See the blog article for more details.
